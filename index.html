@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Who Should Get the Coupon?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Coupon targeting and ROI dashboard on 84.51° Complete Journey retail data, applying the AmExpert 2019 hackathon winners' approach.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400..700;1,400&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#overview">Who should get the coupon?</a>
+    <nav class="sections" aria-label="Sections">
+      <a href="#tracker">Tracker</a>
+      <a href="#drivers">Drivers</a>
+      <a href="#targeting">Targeting</a>
+      <a href="#simulator">Simulator</a>
+      <a href="#incrementality">Incrementality</a>
+      <a href="#method">Method</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <p class="load-error" id="load-error" hidden>The dashboard data did not load. Check that <code>assets/data.js</code> sits next to this page.</p>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section class="hero" id="overview" aria-labelledby="overview-title">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Retail coupon targeting · 84.51° Complete Journey data</p>
+        <h1 id="overview-title">Who should get the coupon?</h1>
+        <p class="lead">A grocery retailer sent <span data-k="campaigns"></span> coupon campaigns to its shoppers. This dashboard works out which households each campaign should go to, using the approach that won the AmExpert 2019 hackathon run by American Express and Analytics Vidhya.</p>
+        <p class="answer">Ranking households by their shopping history and mailing only the top 30% would have reached <strong data-k="reach30"></strong> of the households that redeemed, in campaigns the model had never seen.</p>
+      </div>
+      <figure class="hero-figure" aria-label="Share of mailings with no redemption">
+        <span class="hero-number" data-k="noRedemption"></span>
+        <figcaption>of campaign mailings led to no coupon being redeemed (<span data-k="noRedemptionCount"></span> of <span data-k="mailings"></span>).</figcaption>
+      </figure>
+    </div>
+    <div class="wrap">
+      <dl class="kpis">
+        <div class="kpi"><dt>Households in the study</dt><dd data-k="households"></dd></div>
+        <div class="kpi"><dt>Coupon campaigns</dt><dd data-k="campaigns"></dd></div>
+        <div class="kpi"><dt>Coupons redeemed</dt><dd data-k="couponsRedeemed"></dd></div>
+        <div class="kpi"><dt>Purchase records</dt><dd data-k="transactionsCompact"></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ TRACKER ============ -->
+  <section class="block" id="tracker" aria-labelledby="tracker-title">
+    <div class="wrap">
+      <p class="eyebrow">Campaign tracker</p>
+      <h2 id="tracker-title"><span data-k="campaigns"></span> campaigns, <span data-k="campaignSpan"></span></h2>
+      <p class="intro">Every campaign the retailer ran, who received it and how many redeemed. Personalised campaigns (Type A) picked each household's 16 coupons from its past purchases. Mass campaigns (Types B and C) sent every coupon to everyone.</p>
+
+      <div class="type-compare">
+        <div class="stat">
+          <p class="stat-label"><span class="dot dot-targeted" aria-hidden="true"></span>Personalised (Type A)</p>
+          <p class="stat-value"><span data-k="typeARate"></span> <span class="stat-unit">redeemed</span></p>
+          <p class="stat-note"><span data-k="typeACampaigns"></span> campaigns · <span data-k="typeAMailings"></span> mailings</p>
+        </div>
+        <div class="stat">
+          <p class="stat-label"><span class="dot dot-mass" aria-hidden="true"></span>Mass (Types B and C)</p>
+          <p class="stat-value"><span data-k="massRate"></span> <span class="stat-unit">redeemed</span></p>
+          <p class="stat-note"><span data-k="massCampaigns"></span> campaigns · <span data-k="massMailings"></span> mailings</p>
+        </div>
+        <p class="type-note">Personalised campaigns redeemed at <strong data-k="typeRatio"></strong> the rate of mass ones. They ran at different times to different audiences, so read this as a comparison rather than a controlled test.</p>
+      </div>
+
+      <div class="controls" role="group" aria-label="Filter and sort campaigns">
+        <div class="segmented" role="group" aria-label="Campaign type">
+          <button type="button" id="filter-all" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" id="filter-personalised" data-filter="personalised" aria-pressed="false">Personalised</button>
+          <button type="button" id="filter-mass" data-filter="mass" aria-pressed="false">Mass</button>
+        </div>
+        <label class="select-label" for="tracker-sort">Sort by
+          <select id="tracker-sort">
+            <option value="start">Start date</option>
+            <option value="rate">Redemption rate</option>
+            <option value="households">Households</option>
+          </select>
+        </label>
+        <p class="controls-summary" id="tracker-summary" aria-live="polite"></p>
+      </div>
+      <p class="scroll-hint">Swipe the table sideways to see dates and timing.</p>
+
+      <div class="table-scroll framed">
+        <table class="tracker" id="tracker-table">
+          <thead>
+            <tr>
+              <th scope="col">Campaign</th>
+              <th scope="col" class="num">Households</th>
+              <th scope="col">Redeemed</th>
+              <th scope="col">Dates</th>
+              <th scope="col" class="col-timeline"><span class="sr-only">Timeline</span><div class="timeline-axis" id="timeline-axis" aria-hidden="true"></div></th>
+              <th scope="col" class="num">Coupons</th>
+              <th scope="col">Model role</th>
+            </tr>
+          </thead>
+          <tbody id="tracker-body"></tbody>
+        </table>
+      </div>
+      <p class="footnote"><strong>Model role:</strong> Train campaigns built the model. Test campaigns were held back to check it. Campaigns marked not used either started before the purchase data begins or were still running when the test period began. The vertical line marks the start of the test period, <span data-k="testStartLong"></span>.</p>
+    </div>
+  </section>
+
+  <!-- ============ DRIVERS ============ -->
+  <section class="block" id="drivers" aria-labelledby="drivers-title">
+    <div class="wrap">
+      <p class="eyebrow">What predicts a redemption</p>
+      <h2 id="drivers-title">Past behaviour beats demographics</h2>
+      <p class="intro">Three signals taken from each household's purchases before a campaign starts. Each chart shows the share of mailings that led to at least one redemption, across <span data-k="signalRows"></span> mailings.</p>
+
+      <div class="multiples">
+        <figure class="card chart-card">
+          <figcaption>
+            <h3>Already bought the coupon's products with a coupon</h3>
+            <p class="chart-sub">Number of the campaign's coupons covering products the household had bought with a coupon before</p>
+          </figcaption>
+          <div class="chart" id="chart-matched"></div>
+        </figure>
+        <figure class="card chart-card">
+          <figcaption>
+            <h3>Has redeemed campaign coupons before</h3>
+            <p class="chart-sub">Campaign coupons the household redeemed before this campaign started</p>
+          </figcaption>
+          <div class="chart" id="chart-prior"></div>
+        </figure>
+        <figure class="card chart-card">
+          <figcaption>
+            <h3>Uses coupons in everyday shopping</h3>
+            <p class="chart-sub">Share of the household's items bought with any coupon</p>
+          </figcaption>
+          <div class="chart" id="chart-habit"></div>
+        </figure>
+      </div>
+      <p class="takeaway">Households that had already bought four or more of a campaign's products with a coupon redeemed <strong data-k="matchedTop"></strong> of the time. Households with none redeemed <strong data-k="matchedZero"></strong>. This is the overlap idea the AmExpert 2019 winners built their models on.</p>
+
+      <div class="segments-layout">
+        <div class="segments-copy">
+          <h3>Four shopper segments</h3>
+          <p>Splitting mailings at the median weekly spend (<span data-k="spendCut"></span>) and the median coupon use shows that coupon habit matters more than spend. Big spenders who rarely use coupons redeemed at <strong data-k="segLoyal"></strong>. Lower spenders who use coupons redeemed at <strong data-k="segBudget"></strong>.</p>
+          <p class="footnote">Shade shows the redemption rate. Share is the share of mailings in each segment.</p>
+        </div>
+        <figure class="card matrix-card">
+          <figcaption class="sr-only">Redemption rate by spend level and coupon habit</figcaption>
+          <div class="matrix" id="segment-matrix"></div>
+        </figure>
+      </div>
+      <details class="data-table">
+        <summary>Show the numbers behind these charts</summary>
+        <div class="table-scroll" id="drivers-table"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ TARGETING ============ -->
+  <section class="block" id="targeting" aria-labelledby="targeting-title">
+    <div class="wrap">
+      <p class="eyebrow">Targeting model</p>
+      <h2 id="targeting-title">Mail fewer households, reach most redeemers</h2>
+      <p class="intro">The model learned from <span data-k="trainCampaigns"></span> campaigns that ended before <span data-k="testStartMonth"></span> and was tested on <span data-k="testCampaigns"></span> later campaigns it never saw (<span data-k="testHouseholds"></span> mailings, <span data-k="testRedeemers"></span> redeemers). For each test campaign, households were ranked and we counted how many redeemers fell inside the top slice.</p>
+
+      <div class="targeting-grid">
+        <figure class="card chart-card gains-card">
+          <figcaption>
+            <h3>Share of redeemers reached by mailing the top slice</h3>
+            <p class="chart-sub">Households ranked within each test campaign. Hover or use the arrow keys to read any point.</p>
+          </figcaption>
+          <ul class="legend" id="gains-legend"></ul>
+          <div class="chart" id="chart-gains"></div>
+          <details class="data-table">
+            <summary>Show the numbers</summary>
+            <div class="table-scroll" id="gains-table"></div>
+          </details>
+        </figure>
+
+        <div class="side-stats">
+          <div class="stat">
+            <p class="stat-label">Mail the model's top 30%</p>
+            <p class="stat-value"><span data-k="reach30Exact"></span> <span class="stat-unit">of redeemers reached</span></p>
+            <p class="stat-note">95% interval <span data-k="reach30Ci"></span>. Random mailing reaches 30%.</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Against the simple rule</p>
+            <p class="stat-value"><span data-k="liftOverRule"></span> <span class="stat-unit">points</span></p>
+            <p class="stat-note">The rule alone reaches <span data-k="rule30Exact"></span>. Interval for the gap: <span data-k="liftCi"></span>.</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Ranking quality (AUC, within campaign)</p>
+            <p class="stat-value"><span data-k="aucModel"></span></p>
+            <p class="stat-note">Simple rule <span data-k="aucRule"></span> · logistic regression <span data-k="aucLogistic"></span> · random 0.50</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <h3>Who the model picks</h3>
+          <p class="chart-sub">Test campaigns: the model's top 20% of each campaign's households against everyone else</p>
+          <div class="table-scroll">
+            <table class="compare" id="profile-table"></table>
+          </div>
+        </div>
+        <div class="card">
+          <h3>What the model leans on</h3>
+          <p class="chart-sub">How much ranking quality drops when each group of signals is scrambled, relative to the largest</p>
+          <div class="hbars" id="importance-bars"></div>
+          <p class="footnote">It works on both campaign types. Top 30% reach: personalised <span data-k="byTypeA"></span>, mass <span data-k="byTypeMass"></span>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SIMULATOR ============ -->
+  <section class="block" id="simulator" aria-labelledby="simulator-title">
+    <div class="wrap">
+      <p class="eyebrow">ROI simulator</p>
+      <h2 id="simulator-title">How deep should you mail?</h2>
+      <p class="intro">Set your own economics. The response curves come from the test campaigns, where <span data-k="baseRate"></span> of mailed households redeemed. The money values are assumptions you control. The data is from a US retailer, so amounts are in dollars.</p>
+
+      <div class="sim-grid">
+        <form class="card sim-inputs" id="sim-form" novalidate>
+          <div class="field">
+            <div class="field-head"><label for="in-audience">Households you could mail</label><output for="in-audience" id="out-audience"></output></div>
+            <input type="range" id="in-audience" min="1000" max="200000" step="1000">
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="in-send">Cost to send, per household</label><output for="in-send" id="out-send"></output></div>
+            <input type="range" id="in-send" min="0" max="3" step="0.05">
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="in-discount">Discount given away, per redeeming household</label><output for="in-discount" id="out-discount"></output></div>
+            <input type="range" id="in-discount" min="0" max="10" step="0.01">
+            <p class="field-note">Default from the data: <span data-k="discountPerCoupon"></span> average coupon discount × <span data-k="couponsPerRedeemer"></span> coupons per redeeming household.</p>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="in-profit">Extra profit when a redemption is a new sale</label><output for="in-profit" id="out-profit"></output></div>
+            <input type="range" id="in-profit" min="0" max="40" step="0.5">
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="in-incr">Redemptions that are new sales</label><output for="in-incr" id="out-incr"></output></div>
+            <input type="range" id="in-incr" min="0" max="1" step="0.05">
+            <p class="field-note">The rest would have bought anyway. Only a holdout test can measure this.</p>
+          </div>
+          <button type="button" class="btn-quiet" id="sim-reset">Reset to defaults</button>
+        </form>
+
+        <div class="sim-output">
+          <article class="stub" id="sim-stub" aria-live="polite">
+            <div class="stub-main">
+              <p class="stub-label">Your campaign plan</p>
+              <p class="stub-headline" id="stub-headline"></p>
+              <p class="stub-sub" id="stub-sub"></p>
+            </div>
+            <dl class="stub-side" id="stub-side"></dl>
+          </article>
+          <figure class="card chart-card">
+            <figcaption>
+              <h3>Expected profit by share of households mailed</h3>
+              <p class="chart-sub">Dots mark the most profitable depth for each approach</p>
+            </figcaption>
+            <ul class="legend" id="profit-legend"></ul>
+            <div class="chart" id="chart-profit"></div>
+          </figure>
+          <details class="formula">
+            <summary>How the profit is calculated</summary>
+            <p>Profit = expected redeemers × (new-sale share × extra profit − discount) − households mailed × cost to send.</p>
+            <p>Expected redeemers = households mailed × redemption rate × the share of redeemers each approach reaches at that depth, taken from the test campaigns.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INCREMENTALITY ============ -->
+  <section class="block" id="incrementality" aria-labelledby="incrementality-title">
+    <div class="wrap">
+      <p class="eyebrow">Incrementality check</p>
+      <h2 id="incrementality-title">Most coupons went on products people already buy</h2>
+      <p class="intro"><strong data-k="subsidyBefore"></strong> of redeemed coupons covered products the household had bought before the campaign, and <span data-k="subsidyRecent"></span> covered products bought in the eight weeks just before it. Redemptions on their own cannot show extra sales.</p>
+      <figure class="card chart-card">
+        <figcaption>
+          <h3>When had the household last bought a product the coupon covers?</h3>
+          <p class="chart-sub">Share of redeemed coupons, campaigns with at least eight weeks of purchase history (<span data-k="subsidyChecked"></span> of <span data-k="couponsRedeemed"></span> redemptions)</p>
+        </figcaption>
+        <ul class="legend" id="stack-legend"></ul>
+        <div class="stacks" id="subsidy-stacks"></div>
+        <details class="data-table">
+          <summary>Show the numbers</summary>
+          <div class="table-scroll" id="subsidy-table"></div>
+        </details>
+      </figure>
+      <p class="takeaway">Personalised campaigns redeem more partly because they discount what people already buy. Some coupons cover thousands of products, which pushes the bought-before share up. For coupons covering 20 products or fewer it is still <span data-k="narrowBefore"></span>.</p>
+    </div>
+  </section>
+
+  <!-- ============ RECOMMENDATIONS ============ -->
+  <section class="block" id="recommendations" aria-labelledby="recs-title">
+    <div class="wrap">
+      <p class="eyebrow">Recommendations</p>
+      <h2 id="recs-title">What I would tell the marketing team</h2>
+      <ol class="recs">
+        <li class="rec">
+          <h3>Rank households before every mailing</h3>
+          <p>Mailing the model's top 30% reaches <strong data-k="reach30"></strong> of redeemers for 30% of the postage. The simulator shows where the profit peaks for your costs.</p>
+        </li>
+        <li class="rec">
+          <h3>Start with the simple rule</h3>
+          <p>"Send it to people who already buy these products with coupons" reaches <span data-k="rule30"></span> on its own and runs in any CRM. The model adds about <span data-k="liftOverRuleRound"></span> points on top.</p>
+        </li>
+        <li class="rec">
+          <h3>Personalise the offer</h3>
+          <p>Campaigns that chose coupons from each household's history redeemed at <strong data-k="typeRatio"></strong> the rate of mass campaigns.</p>
+        </li>
+        <li class="rec">
+          <h3>Prove the extra sales with a holdout</h3>
+          <p>Keep a random 10% of each targeted list back and compare their spend with those who got the coupon. <span data-k="subsidyBefore"></span> of redemptions went on products households already bought, so this test decides whether the campaign pays.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ METHOD ============ -->
+  <section class="block" id="method" aria-labelledby="method-title">
+    <div class="wrap method">
+      <p class="eyebrow">Method</p>
+      <h2 id="method-title">How this was built</h2>
+      <div class="method-grid">
+        <div class="method-text">
+          <h3>Data</h3>
+          <p>84.51° Complete Journey: <span data-k="households"></span> households, <span data-k="transactions"></span> purchase records from <span data-k="txStart"></span> to <span data-k="txEnd"></span>, <span data-k="campaigns"></span> campaigns and <span data-k="couponsRedeemed"></span> coupon redemptions. Released into the public domain (CC0) and packaged in the <a href="https://github.com/bradleyboehmke/completejourney" rel="noopener">completejourney</a> R package.</p>
+          <h3>Approach, adapted from the AmExpert 2019 winners</h3>
+          <ul>
+            <li>One row per household and campaign. The outcome is whether the household redeemed at least one of that campaign's coupons.</li>
+            <li>Every signal uses only purchases and redemptions from before the campaign started, the rule all five winners stressed.</li>
+            <li>Signals cover overlap between the campaign's coupon products and past purchases, past redemptions, coupon and promotion habits, spend and trips, and demographics where available.</li>
+            <li>The simple rule copies the Rank 2 winner's no-model ranking: products bought with a coupon, then products bought at all, then past redemption rate.</li>
+            <li>Test campaigns started on or after <span data-k="testStartLong"></span>. Training used only campaigns that had ended by then. Intervals come from 1,000 bootstrap resamples of households within campaigns.</li>
+          </ul>
+          <p>Read the winners' write-up on <a href="https://www.analyticsvidhya.com/blog/2019/10/5-winning-solutions-approaches-amexpert-retail_hackathon-feature-engineering/" rel="noopener">Analytics Vidhya</a> and their code on <a href="https://github.com/kunalj101/amExpert_ML_Hackathon_2019_Winners_Soultions" rel="noopener">GitHub</a>.</p>
+        </div>
+        <div class="method-side">
+          <div class="card">
+            <h3>Model comparison</h3>
+            <p class="chart-sub">AUC within campaign. The final model was picked on the training campaigns before looking at the test.</p>
+            <div class="table-scroll"><table class="compare" id="model-table"></table></div>
+          </div>
+          <div class="card">
+            <h3>Limits</h3>
+            <ul class="limits">
+              <li>For personalised campaigns the data does not say which 16 coupons each household got, so the model works at campaign level.</li>
+              <li>A redemption is not proof of an extra sale. The simulator's new-sale share is an assumption.</li>
+              <li>The test period has <span data-k="testCampaigns"></span> campaigns, and one large personalised campaign holds most of its redeemers.</li>
+              <li>US grocery data from 2017. Response rates in other markets and years will differ.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <!-- EDIT: put your name, LinkedIn and GitHub repo links here -->
+    <p>Built by <strong>Gunjal Saluja</strong> · <a href="linkedin.com/in/gunjal-saluja-905b6b27a" rel="noopener">LinkedIn</a> · <a href="https://github.com/Gunjal-proj/Coupon_targeting_dashboard.git" rel="noopener">Code on GitHub</a></p>
+    <p class="footer-note">Data: 84.51° Complete Journey (CC0). Independent student project, not affiliated with 84.51°, American Express or Analytics Vidhya. Numbers generated <span data-k="generated"></span>.</p>
+  </div>
+</footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

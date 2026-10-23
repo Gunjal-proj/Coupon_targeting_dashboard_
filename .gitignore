@@ -1,0 +1,13 @@
+# downloaded source data (re-created by run_pipeline.py)
+data/raw/*
+!data/raw/README.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# OS clutter
+.DS_Store
+Thumbs.db
